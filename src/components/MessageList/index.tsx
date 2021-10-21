@@ -2,6 +2,7 @@ import styles from './style.module.scss'
 import { api } from '../../services/api';
 import img from '../../assets/logo.svg'
 import { useEffect, useState } from 'react';
+import io from 'socket.io-client';
 
 type Message = {
     text: string;
@@ -13,9 +14,32 @@ type Message = {
     }
 }
 
+const messageQueue: Message[] = [];
+
+
+const sock = io('http://localhost:4000');
+
+sock.on('new_message', (newMessage: Message) => {
+    messageQueue.push(newMessage);
+})
+
 export function MessageList() {
 
     const [messages, setMessages] = useState<Message[]>([])
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (messageQueue.length > 0) {
+                setMessages(prevState => [
+                    messageQueue[0],
+                    prevState[0],
+                    prevState[1],
+                    prevState[2]
+                ].filter(Boolean))
+                messageQueue.shift();
+            }
+        }, 3000)
+    }, [])
 
     useEffect(() => {
         api.get<Message[]>('latest_messages').then(response => {
